@@ -1,4 +1,5 @@
 import initSqlJs, { type Database as SqlJsDatabase } from 'sql.js';
+import { base } from '$app/paths';
 import { uuidv7 } from 'uuidv7';
 import type { EncryptionInfo, PasswordEntry } from './types';
 import { getStorageBackend, type StorageBackend } from './storage/storage';
@@ -24,7 +25,7 @@ async function getSqlModule() {
 	if (sqlModule) return sqlModule;
 
 	sqlModule = await initSqlJs({
-		locateFile: (file: string) => `/${file}`
+		locateFile: (file: string) => `${base}/${file}`
 	});
 
 	return sqlModule;
