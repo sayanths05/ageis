@@ -1,0 +1,48 @@
+@import 'tailwindcss';
+
+button {
+	cursor: pointer;
+	transition: transform 100ms ease;
+}
+
+button:active:not(:disabled) {
+	transform: scale(0.97);
+}
+
+/* Soft focus glow */
+input:focus,
+select:focus,
+textarea:focus {
+	outline: none;
+	box-shadow: 0 0 0 3px rgb(255 255 255 / 0.1);
+	border-color: rgb(255 255 255 / 0.3);
+}
+
+input[type='range']:focus {
+	box-shadow: none;
+	border-color: transparent;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+	width: 6px;
+}
+
+::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+	background: rgb(51 65 85 / 0.5);
+	border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: rgb(71 85 105 / 0.7);
+}
+
+/* Dot pattern for auth screens */
+.bg-dot-pattern {
+	background-image: radial-gradient(circle, rgb(148 163 184 / 0.15) 1px, transparent 1px);
+	background-size: 20px 20px;
+}
