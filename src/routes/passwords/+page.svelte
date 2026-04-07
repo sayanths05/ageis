@@ -10,6 +10,7 @@
 	import ShieldLogo from '$lib/components/ShieldLogo.svelte';
 	import { Search, ArrowUpDown, Plus } from 'lucide-svelte';
 	import { getFaviconUrl, handleFaviconError } from '$lib/utils';
+    import { resolve } from '$app/paths';
 
 	type SortOption = 'name' | 'updated' | 'created';
 
@@ -86,7 +87,7 @@
 	}
 
 	function handleView(entry: PasswordEntry) {
-		goto(`/passwords/${entry.id}`);
+		goto(resolve(`/passwords/${entry.id}`));
 	}
 
 	function selectCategory(category: string) {
@@ -203,7 +204,7 @@
 		<div>
 			{#if !searchQuery && !selectedCategory}
 				<button
-					onclick={() => goto('/passwords/add')}
+					onclick={() => goto(resolve('/passwords/add'))}
 					class="w-full text-left flex items-center gap-4 px-4 py-4 hover:bg-slate-800/30 transition-colors cursor-pointer border-b border-slate-800/40"
 				>
 					<div class="w-10 h-10 rounded-full border border-dashed border-slate-600 flex items-center justify-center flex-shrink-0">

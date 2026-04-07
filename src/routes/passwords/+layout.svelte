@@ -6,6 +6,7 @@
 	import { getStorageBackendSync } from '$lib/storage/storage';
 	import { Lock, Download } from 'lucide-svelte';
 	import ShieldLogo from '$lib/components/ShieldLogo.svelte';
+    import { resolve } from '$app/paths';
 
 	interface Props {
 		children: Snippet;
@@ -20,7 +21,7 @@
 
 	$effect(() => {
 		if ($authState.status !== 'unlocked') {
-			goto('/');
+			goto(resolve('/'));
 		}
 	});
 

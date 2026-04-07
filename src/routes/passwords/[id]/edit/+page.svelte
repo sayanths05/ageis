@@ -6,6 +6,7 @@
 	import { getPasswordById } from '$lib/db';
 	import type { PasswordEntry } from '$lib/types';
 	import PasswordForm from '$lib/components/PasswordForm.svelte';
+    import { resolve } from '$app/paths';
 
 	let entry = $state<PasswordEntry | null>(null);
 	let loading = $state(true);
@@ -15,7 +16,7 @@
 		entry = await getPasswordById(id);
 
 		if (!entry) {
-			goto('/passwords');
+			goto(resolve('/passwords'));
 			return;
 		}
 

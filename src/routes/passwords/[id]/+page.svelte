@@ -9,6 +9,7 @@
 	import type { DecryptedPasswordEntry } from '$lib/types';
 	import PasswordView from '$lib/components/PasswordView.svelte';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
+    import { resolve } from '$app/paths';
 
 	let entry = $state<DecryptedPasswordEntry | null>(null);
 	let loading = $state(true);
@@ -19,7 +20,7 @@
 		const raw = await getPasswordById(id);
 
 		if (!raw) {
-			goto('/passwords');
+			goto(resolve('/passwords'));
 			return;
 		}
 
@@ -52,8 +53,8 @@
 	<div in:fly={{ x: 30, duration: 200 }}>
 		<PasswordView
 			{entry}
-			onclose={() => goto('/passwords')}
-			onedit={() => goto(`/passwords/${entry!.id}/edit`)}
+			onclose={() => goto(resolve('/passwords'))}
+			onedit={() => goto(resolve(`/passwords/${entry!.id}/edit`))}
 			ondelete={() => (showDeleteConfirm = true)}
 		/>
 	</div>
@@ -68,7 +69,7 @@
 		onconfirm={async () => {
 			await deletePassword(entry!.id);
 			addToast('Password deleted', 'info');
-			goto('/passwords');
+			goto(resolve('/passwords'));
 		}}
 		oncancel={() => (showDeleteConfirm = false)}
 	/>
