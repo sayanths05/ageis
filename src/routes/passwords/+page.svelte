@@ -7,6 +7,7 @@
 	import { getInitial, getColorForName } from '$lib/colors';
 	import type { PasswordEntry } from '$lib/types';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
+
 	import ShieldLogo from '$lib/components/ShieldLogo.svelte';
 	import { Search, ArrowUpDown, Plus } from 'lucide-svelte';
 	import { getFaviconUrl, handleFaviconError } from '$lib/utils';
@@ -189,12 +190,23 @@
 			<div class="inline-block w-5 h-5 border-2 border-slate-600 border-t-slate-300 rounded-full animate-spin"></div>
 		</div>
 	{:else if filteredPasswords.length === 0 && !hasPasswords}
-		<div in:fly={{ y: 10, duration: 150 }} class="text-center py-20">
-			<div class="flex justify-center mb-4 opacity-40">
-				<ShieldLogo size={48} />
+		<div in:fly={{ y: 10, duration: 150 }}>
+			<button
+				onclick={() => goto(resolve('/passwords/add'))}
+				class="w-full text-left flex items-center gap-4 px-4 py-4 hover:bg-slate-800/30 transition-colors cursor-pointer border-b border-slate-800/40"
+			>
+				<div class="w-10 h-10 rounded-full border border-dashed border-slate-600 flex items-center justify-center flex-shrink-0">
+					<Plus size={18} class="text-slate-500" />
+				</div>
+				<span class="text-sm font-medium text-slate-400">Add new password</span>
+			</button>
+			<div class="flex flex-col items-center py-12 gap-2">
+				<div class="opacity-30 mb-1">
+					<ShieldLogo size={44} />
+				</div>
+				<p class="text-slate-500 text-sm">Your vault is empty</p>
+				<p class="text-slate-600 text-xs">Add your first password to get started</p>
 			</div>
-			<p class="text-slate-500 mb-1">Your vault is empty</p>
-			<p class="text-slate-600 text-sm">Add your first password to get started</p>
 		</div>
 	{:else if filteredPasswords.length === 0}
 		<div in:fly={{ y: 10, duration: 150 }} class="text-center py-20">
