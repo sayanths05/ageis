@@ -18,7 +18,7 @@ const config = {
 			fallback: '404.html'
 		}),
 		paths: {
-			base: '/ageis/'
+			base: process.env.BASE_PATH || ''
 		}
 	}
 };

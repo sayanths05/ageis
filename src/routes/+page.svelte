@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { base, resolve } from '$app/paths';
 	import { authState, initialize } from '$lib/auth-store';
 	import FilePicker from '$lib/components/FilePicker.svelte';
 	import SetupForm from '$lib/components/SetupForm.svelte';
@@ -19,7 +20,7 @@
 
 	$effect(() => {
 		if ($authState.status === 'unlocked') {
-			goto('/passwords');
+			goto(resolve('/passwords'));
 		}
 	});
 </script>
