@@ -30,6 +30,6 @@
 	</div>
 {:else if entry}
 	<div in:fly={{ x: 30, duration: 200 }}>
-		<PasswordForm {entry} onclose={() => goto(`/passwords/${$page.params.id}`)} />
+		<PasswordForm {entry} onclose={() => goto(resolve(`/passwords/${$page.params.id}`))} />
 	</div>
 {/if}
