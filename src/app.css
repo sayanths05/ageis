@@ -2,11 +2,11 @@
 
 button {
 	cursor: pointer;
-	transition: transform 100ms ease;
 }
 
 button:active:not(:disabled) {
 	transform: scale(0.97);
+	transition: transform 100ms ease;
 }
 
 /* Soft focus glow */

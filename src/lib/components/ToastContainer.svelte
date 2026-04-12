@@ -2,12 +2,6 @@
 	import { fly } from 'svelte/transition';
 	import { toasts, removeToast, type ToastType } from '$lib/toast-store';
 
-	let toastList = $state<{ id: number; message: string; type: ToastType }[]>([]);
-
-	toasts.subscribe((value) => {
-		toastList = value;
-	});
-
 	const styleMap: Record<ToastType, string> = {
 		success: 'bg-green-900/80 border-green-700 text-green-200',
 		error: 'bg-red-900/80 border-red-700 text-red-200',
@@ -19,9 +13,9 @@
 	}
 </script>
 
-{#if toastList.length > 0}
-	<div class="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
-		{#each toastList as toast (toast.id)}
+{#if $toasts.length > 0}
+	<div class="fixed bottom-4 right-4 z-50 flex flex-col gap-2" aria-live="polite" role="status">
+		{#each $toasts as toast (toast.id)}
 			<div
 				class="max-w-xs rounded border px-4 py-2 shadow-lg backdrop-blur-sm {getStyle(toast.type)}"
 				transition:fly={{ x: 30, duration: 200 }}

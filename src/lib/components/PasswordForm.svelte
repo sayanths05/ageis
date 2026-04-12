@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { fly } from 'svelte/transition';
+	import { beforeNavigate, goto } from '$app/navigation';
 	import { encryptField, decryptField } from '$lib/auth';
 	import { createPassword, updatePassword } from '$lib/db';
 	import { addToast } from '$lib/toast-store';
@@ -8,6 +9,7 @@
 	import { ArrowLeft, Eye, EyeOff } from 'lucide-svelte';
 	import { getPasswordStrength } from './PasswordStrength.svelte';
 	import PasswordGenerator from './PasswordGenerator.svelte';
+	import ConfirmModal from './ConfirmModal.svelte';
 
 	interface Props {
 		entry: PasswordEntry | null;
@@ -26,6 +28,10 @@
 	let error = $state('');
 	let showPassword = $state(false);
 	let showGenerator = $state(false);
+	let showDiscardModal = $state(false);
+	let pendingNavigation: (() => void) | null = null;
+	let nameInput: HTMLInputElement;
+	let originalValues = $state({ name: '', url: '', username: '', password: '', notes: '', category: '' });
 
 	// Generator settings (persisted across open/close within the form session)
 	let genLength = $state(20);
@@ -41,11 +47,31 @@
 		strength.level > 0 ? strength.borderColor : 'border-slate-800/60'
 	);
 
+	const isDirty = $derived(
+		name !== originalValues.name ||
+		url !== originalValues.url ||
+		username !== originalValues.username ||
+		password !== originalValues.password ||
+		notes !== originalValues.notes ||
+		category !== originalValues.category
+	);
+
+	beforeNavigate((navigation) => {
+		if (isDirty && !saving) {
+			navigation.cancel();
+			pendingNavigation = () => {
+				originalValues = { name, url, username, password, notes, category };
+				navigation.to?.url && goto(navigation.to.url);
+			};
+			showDiscardModal = true;
+		}
+	});
+
 	onMount(() => {
 		if (entry) {
 			loadEntry(entry);
 		} else {
-			document.getElementById('name')?.focus();
+			nameInput?.focus();
 		}
 	});
 
@@ -54,8 +80,13 @@
 		url = e.url;
 		username = e.username;
 		category = e.category;
-		password = await decryptField(e.encrypted_password);
-		notes = await decryptField(e.notes);
+		const [decryptedPassword, decryptedNotes] = await Promise.all([
+			decryptField(e.encrypted_password),
+			decryptField(e.notes)
+		]);
+		password = decryptedPassword;
+		notes = decryptedNotes;
+		originalValues = { name, url, username, password: decryptedPassword, notes: decryptedNotes, category };
 	}
 
 	function handleUseGenerated(generated: string) {
@@ -81,8 +112,10 @@
 		saving = true;
 
 		try {
-			const encryptedPassword = await encryptField(password);
-			const encryptedNotes = notes ? await encryptField(notes) : '';
+			const [encryptedPassword, encryptedNotes] = await Promise.all([
+				encryptField(password),
+				notes ? encryptField(notes) : Promise.resolve('')
+			]);
 
 			if (entry) {
 				await updatePassword(entry.id, {
@@ -105,6 +138,7 @@
 			}
 
 			addToast(entry ? 'Password updated' : 'Password saved', 'success');
+			originalValues = { name, url, username, password, notes, category };
 			onclose();
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to save password.';
@@ -149,17 +183,20 @@
 		<div class="mb-6">
 			<div class="bg-slate-900/50 border border-slate-800/60 rounded-xl overflow-hidden">
 				<input
-					id="name"
+					bind:this={nameInput}
 					type="text"
 					bind:value={name}
 					placeholder="Name"
+					autocomplete="off"
 					class="w-full px-4 py-3.5 bg-transparent text-slate-100 placeholder-slate-600 focus:outline-none focus:bg-slate-800/30 transition-colors"
 				/>
 				<div class="border-t border-slate-800/60"></div>
 				<input
 					type="text"
+					inputmode="url"
 					bind:value={url}
 					placeholder="URL"
+					autocomplete="off"
 					class="w-full px-4 py-3.5 bg-transparent text-slate-100 placeholder-slate-600 focus:outline-none focus:bg-slate-800/30 transition-colors"
 				/>
 				<div class="border-t border-slate-800/60"></div>
@@ -167,6 +204,7 @@
 					type="text"
 					bind:value={username}
 					placeholder="Username"
+					autocomplete="off"
 					class="w-full px-4 py-3.5 bg-transparent text-slate-100 placeholder-slate-600 focus:outline-none focus:bg-slate-800/30 transition-colors"
 				/>
 				<div class="border-t border-slate-800/60"></div>
@@ -187,6 +225,7 @@
 						type={showPassword ? 'text' : 'password'}
 						bind:value={password}
 						placeholder="Password"
+						autocomplete="off"
 						class="w-full px-4 py-3.5 pr-24 bg-transparent text-slate-100 placeholder-slate-600 focus:outline-none focus:bg-slate-800/30 transition-colors"
 					/>
 					<div class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
@@ -239,6 +278,7 @@
 					bind:value={notes}
 					rows="3"
 					placeholder="Notes"
+					autocomplete="off"
 					class="w-full px-4 py-3.5 bg-transparent text-slate-100 placeholder-slate-600 focus:outline-none focus:bg-slate-800/30 transition-colors resize-none"
 				></textarea>
 			</div>
@@ -251,3 +291,21 @@
 		{/if}
 	</form>
 </div>
+
+{#if showDiscardModal}
+	<ConfirmModal
+		title="Unsaved Changes"
+		message="You have unsaved changes. Discard them?"
+		confirmLabel="Discard"
+		confirmDestructive={true}
+		onconfirm={() => {
+			showDiscardModal = false;
+			pendingNavigation?.();
+			pendingNavigation = null;
+		}}
+		oncancel={() => {
+			showDiscardModal = false;
+			pendingNavigation = null;
+		}}
+	/>
+{/if}

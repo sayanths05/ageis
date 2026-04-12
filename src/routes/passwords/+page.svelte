@@ -2,28 +2,24 @@
 	import { onMount } from 'svelte';
 	import { fly } from 'svelte/transition';
 	import { goto } from '$app/navigation';
-	import { getAllPasswords, deletePassword, searchPasswords } from '$lib/db';
-	import { addToast } from '$lib/toast-store';
+	import { getAllPasswords } from '$lib/db';
 	import { getInitial, getColorForName } from '$lib/colors';
 	import type { PasswordEntry } from '$lib/types';
-	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
-
 	import ShieldLogo from '$lib/components/ShieldLogo.svelte';
 	import { Search, ArrowUpDown, Plus } from 'lucide-svelte';
-	import { getFaviconUrl, handleFaviconError } from '$lib/utils';
+	import { getFaviconUrl } from '$lib/utils';
     import { resolve } from '$app/paths';
 
 	type SortOption = 'name' | 'updated' | 'created';
 
 	let allPasswords = $state<PasswordEntry[]>([]);
-	let passwords = $state<PasswordEntry[]>([]);
 	let searchQuery = $state('');
 	let selectedCategory = $state('');
 	let sortBy = $state<SortOption>('name');
 	let showSortMenu = $state(false);
 	let loading = $state(true);
-	let deletingId = $state<string | null>(null);
-	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+	let error = $state('');
+	let failedFavicons = $state(new Set<string>());
 
 	const hasPasswords = $derived(allPasswords.length > 0);
 
@@ -32,10 +28,22 @@
 	);
 
 	const filteredPasswords = $derived.by(() => {
-		let result = passwords.filter((p) => {
-			if (selectedCategory && p.category !== selectedCategory) return false;
-			return true;
-		});
+		let result = allPasswords;
+
+		if (searchQuery) {
+			const q = searchQuery.toLowerCase();
+			result = result.filter(
+				(p) =>
+					p.name.toLowerCase().includes(q) ||
+					p.url.toLowerCase().includes(q) ||
+					p.username.toLowerCase().includes(q) ||
+					p.category.toLowerCase().includes(q)
+			);
+		}
+
+		if (selectedCategory) {
+			result = result.filter((p) => p.category === selectedCategory);
+		}
 
 		if (sortBy === 'updated') {
 			result = [...result].sort((a, b) => b.updated_at.localeCompare(a.updated_at));
@@ -52,39 +60,19 @@
 
 	async function loadPasswords() {
 		loading = true;
+		error = '';
 
 		try {
-			if (searchQuery) {
-				passwords = await searchPasswords(searchQuery);
-			} else {
-				const all = await getAllPasswords();
-				allPasswords = all;
-				passwords = all;
-			}
+			allPasswords = await getAllPasswords();
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Failed to load passwords.';
 		} finally {
 			loading = false;
 		}
 	}
 
-	function handleSearch() {
-		if (debounceTimer) clearTimeout(debounceTimer);
-
-		debounceTimer = setTimeout(() => {
-			loadPasswords();
-		}, 200);
-	}
-
-	function handleDelete(id: string) {
-		deletingId = id;
-	}
-
-	async function confirmDelete() {
-		if (!deletingId) return;
-
-		await deletePassword(deletingId);
-		addToast('Password deleted', 'info');
-		deletingId = null;
-		await loadPasswords();
+	function onFaviconError(src: string) {
+		failedFavicons = new Set([...failedFavicons, src]);
 	}
 
 	function handleView(entry: PasswordEntry) {
@@ -116,7 +104,6 @@
 		<input
 			type="text"
 			bind:value={searchQuery}
-			oninput={handleSearch}
 			placeholder="Search..."
 			class="w-full pl-11 pr-4 py-3.5 bg-slate-900/50 border border-slate-800/60 rounded-xl text-slate-100 placeholder-slate-600 focus:outline-none focus:border-slate-600 transition-colors"
 		/>
@@ -147,6 +134,8 @@
 			<div class="relative flex-shrink-0">
 				<button
 					onclick={(e) => { e.stopPropagation(); showSortMenu = !showSortMenu; }}
+					aria-haspopup="true"
+					aria-expanded={showSortMenu}
 					class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-500 hover:text-slate-300 transition-colors"
 				>
 					<ArrowUpDown size={14} />
@@ -155,9 +144,11 @@
 
 				{#if showSortMenu}
 					<div
+						role="menu"
 						class="absolute right-0 top-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-20 min-w-[120px]"
 					>
 						<button
+							role="menuitem"
 							onclick={() => selectSort('name')}
 							class="w-full text-left px-4 py-2.5 text-sm transition-colors
 								{sortBy === 'name' ? 'text-slate-100' : 'text-slate-400 hover:text-slate-200'}"
@@ -165,6 +156,7 @@
 							A–Z
 						</button>
 						<button
+							role="menuitem"
 							onclick={() => selectSort('updated')}
 							class="w-full text-left px-4 py-2.5 text-sm transition-colors
 								{sortBy === 'updated' ? 'text-slate-100' : 'text-slate-400 hover:text-slate-200'}"
@@ -172,6 +164,7 @@
 							Recent
 						</button>
 						<button
+							role="menuitem"
 							onclick={() => selectSort('created')}
 							class="w-full text-left px-4 py-2.5 text-sm transition-colors
 								{sortBy === 'created' ? 'text-slate-100' : 'text-slate-400 hover:text-slate-200'}"
@@ -188,6 +181,10 @@
 	{#if loading}
 		<div class="text-center py-16 text-slate-500">
 			<div class="inline-block w-5 h-5 border-2 border-slate-600 border-t-slate-300 rounded-full animate-spin"></div>
+		</div>
+	{:else if error}
+		<div class="mb-6 py-3 px-4 bg-red-900/20 border border-red-800/40 rounded-xl text-red-400 text-sm">
+			{error}
 		</div>
 	{:else if filteredPasswords.length === 0 && !hasPasswords}
 		<div in:fly={{ y: 10, duration: 150 }}>
@@ -228,7 +225,8 @@
 
 			{#each filteredPasswords as entry, i (entry.id)}
 				{@const color = getColorForName(entry.name)}
-				{@const favicon = getFaviconUrl(entry.url)}
+				{@const faviconSrc = getFaviconUrl(entry.url)}
+				{@const favicon = faviconSrc && !failedFavicons.has(faviconSrc) ? faviconSrc : null}
 				<button
 					in:fly={{ y: 15, duration: 150, delay: i < 5 ? i * 30 : 0 }}
 					onclick={() => handleView(entry)}
@@ -240,14 +238,10 @@
 							<img
 								src={favicon}
 								alt=""
+								loading="lazy"
 								class="w-10 h-10 rounded-full object-cover bg-slate-800"
-								onerror={handleFaviconError}
+								onerror={() => onFaviconError(favicon)}
 							/>
-							<div
-								class="w-10 h-10 rounded-full {color.bg} items-center justify-center flex-shrink-0 hidden"
-							>
-								<span class="text-sm font-semibold {color.text}">{getInitial(entry.name)}</span>
-							</div>
 						{:else}
 							<div class="w-10 h-10 rounded-full {color.bg} flex items-center justify-center">
 								<span class="text-sm font-semibold {color.text}">{getInitial(entry.name)}</span>
@@ -275,17 +269,6 @@
 		</div>
 	{/if}
 </div>
-
-{#if deletingId}
-	<ConfirmModal
-		title="Delete Password"
-		message="Are you sure? This action cannot be undone."
-		confirmLabel="Delete"
-		confirmDestructive={true}
-		onconfirm={confirmDelete}
-		oncancel={() => (deletingId = null)}
-	/>
-{/if}
 
 <style>
 	.no-scrollbar::-webkit-scrollbar {

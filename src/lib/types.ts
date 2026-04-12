@@ -34,4 +34,5 @@ export type AuthState =
 	| { status: 'needs_file' }
 	| { status: 'first_time_setup' }
 	| { status: 'locked' }
-	| { status: 'unlocked' };
+	| { status: 'unlocked' }
+	| { status: 'error'; message: string };

@@ -52,6 +52,7 @@
 					type="password"
 					bind:value={password}
 					disabled={$authLoading}
+					autocomplete="new-password"
 					placeholder="Enter master password (min 8 characters)"
 					class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 disabled:opacity-50"
 				/>
@@ -69,6 +70,7 @@
 					type="password"
 					bind:value={confirmPassword}
 					disabled={$authLoading}
+					autocomplete="new-password"
 					placeholder="Confirm master password"
 					class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 disabled:opacity-50"
 				/>

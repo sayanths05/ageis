@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { base, resolve } from '$app/paths';
+	import { resolve } from '$app/paths';
 	import { authState, initialize } from '$lib/auth-store';
 	import FilePicker from '$lib/components/FilePicker.svelte';
 	import SetupForm from '$lib/components/SetupForm.svelte';
@@ -31,6 +31,14 @@
 			<h1 class="text-2xl font-bold text-red-400 mb-4">Initialization Failed</h1>
 			<p class="text-slate-400 mb-2">{initError}</p>
 			<p class="text-slate-500 text-sm">Check the browser console for details.</p>
+		</div>
+	</div>
+{:else if $authState.status === 'error'}
+	<div class="flex items-center justify-center min-h-screen px-4">
+		<div class="text-center">
+			<h1 class="text-2xl font-bold text-red-400 mb-4">Vault Error</h1>
+			<p class="text-slate-400 mb-2">{$authState.message}</p>
+			<p class="text-slate-500 text-sm">Your vault file may be corrupted. Try importing a backup.</p>
 		</div>
 	</div>
 {:else if $authState.status === 'loading'}

@@ -17,18 +17,19 @@ const VALID_PASSWORD_COLUMNS = new Set([
 
 // --- Database Singleton ---
 
-let sqlModule: Awaited<ReturnType<typeof initSqlJs>> | null = null;
+let sqlModulePromise: Promise<Awaited<ReturnType<typeof initSqlJs>>> | null = null;
+let dbPromise: Promise<SqlJsDatabase> | null = null;
 let db: SqlJsDatabase | null = null;
 let storage: StorageBackend | null = null;
 
 async function getSqlModule() {
-	if (sqlModule) return sqlModule;
+	if (!sqlModulePromise) {
+		sqlModulePromise = initSqlJs({
+			locateFile: (file: string) => `${base}/${file}`
+		});
+	}
 
-	sqlModule = await initSqlJs({
-		locateFile: (file: string) => `${base}/${file}`
-	});
-
-	return sqlModule;
+	return sqlModulePromise;
 }
 
 function initializeSchema(database: SqlJsDatabase): void {
@@ -57,9 +58,7 @@ function initializeSchema(database: SqlJsDatabase): void {
 	`);
 }
 
-export async function getDatabase(): Promise<SqlJsDatabase> {
-	if (db) return db;
-
+async function initDatabase(): Promise<SqlJsDatabase> {
 	storage = await getStorageBackend();
 
 	if (!storage.isReady() && storage.needsFilePick()) {
@@ -78,6 +77,14 @@ export async function getDatabase(): Promise<SqlJsDatabase> {
 		if (error instanceof DatabaseError) throw error;
 		throw new DatabaseError('Failed to initialize database', error);
 	}
+}
+
+export function getDatabase(): Promise<SqlJsDatabase> {
+	if (!dbPromise) {
+		dbPromise = initDatabase();
+	}
+
+	return dbPromise;
 }
 
 export async function persistDatabase(): Promise<void> {
@@ -103,11 +110,15 @@ export async function importDatabase(): Promise<boolean> {
 
 	if (!data) return false;
 
-	// Close existing db if open
 	if (db) {
 		db.close();
 		db = null;
+		dbPromise = null;
 	}
+
+	const SQL = await getSqlModule();
+	db = new SQL.Database(new Uint8Array(data));
+	initializeSchema(db);
 
 	return true;
 }
@@ -118,6 +129,7 @@ export async function closeDatabase(): Promise<void> {
 	await persistDatabase();
 	db.close();
 	db = null;
+	dbPromise = null;
 }
 
 // --- enc_info CRUD ---
@@ -238,20 +250,6 @@ export async function deletePassword(id: string): Promise<void> {
 	const database = await getDatabase();
 	database.run('DELETE FROM passwords WHERE id = ?', [id]);
 	await persistDatabase();
-}
-
-export async function searchPasswords(query: string): Promise<PasswordEntry[]> {
-	const database = await getDatabase();
-	const pattern = `%${query}%`;
-
-	const results = database.exec(
-		'SELECT id, name, url, username, encrypted_password, notes, category, created_at, updated_at FROM passwords WHERE name LIKE ? OR url LIKE ? OR username LIKE ? OR category LIKE ? ORDER BY name COLLATE NOCASE ASC',
-		[pattern, pattern, pattern, pattern]
-	);
-
-	if (results.length === 0) return [];
-
-	return results[0].values.map(mapRowToPasswordEntry);
 }
 
 // --- Helpers ---

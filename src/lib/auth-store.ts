@@ -7,7 +7,7 @@ import {
 	resetAutoLockTimer,
 	setAutoLockCallback
 } from './auth';
-import { exportDatabase, importDatabase } from './db';
+import { closeDatabase, exportDatabase, importDatabase } from './db';
 import { getStorageBackend } from './storage/storage';
 import type { AuthState } from './types';
 
@@ -16,7 +16,8 @@ export const authError = writable<string | null>(null);
 export const authLoading = writable(false);
 
 export async function initialize(): Promise<void> {
-	setAutoLockCallback(() => {
+	setAutoLockCallback(async () => {
+		await closeDatabase();
 		authState.set({ status: 'locked' });
 	});
 
@@ -124,8 +125,9 @@ export async function handleExportVault(): Promise<void> {
 	}
 }
 
-export function handleLock(): void {
+export async function handleLock(): Promise<void> {
 	lockVault();
+	await closeDatabase();
 	authState.set({ status: 'locked' });
 	authError.set(null);
 }

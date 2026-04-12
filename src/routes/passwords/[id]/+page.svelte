@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { fly } from 'svelte/transition';
 	import { getPasswordById, deletePassword } from '$lib/db';
@@ -14,40 +14,51 @@
 	let entry = $state<DecryptedPasswordEntry | null>(null);
 	let loading = $state(true);
 	let showDeleteConfirm = $state(false);
+	let error = $state('');
 
 	onMount(async () => {
-		const id = $page.params.id!;
-		const raw = await getPasswordById(id);
+		try {
+			const id = page.params.id!;
+			const raw = await getPasswordById(id);
 
-		if (!raw) {
-			goto(resolve('/passwords'));
-			return;
+			if (!raw) {
+				goto(resolve('/passwords'));
+				return;
+			}
+
+			const [password, notes] = await Promise.all([
+				decryptField(raw.encrypted_password),
+				decryptField(raw.notes)
+			]);
+
+			entry = {
+				id: raw.id,
+				name: raw.name,
+				url: raw.url,
+				username: raw.username,
+				password,
+				notes,
+				category: raw.category,
+				created_at: raw.created_at,
+				updated_at: raw.updated_at
+			};
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Failed to load password.';
+		} finally {
+			loading = false;
 		}
-
-		const [password, notes] = await Promise.all([
-			decryptField(raw.encrypted_password),
-			decryptField(raw.notes)
-		]);
-
-		entry = {
-			id: raw.id,
-			name: raw.name,
-			url: raw.url,
-			username: raw.username,
-			password,
-			notes,
-			category: raw.category,
-			created_at: raw.created_at,
-			updated_at: raw.updated_at
-		};
-
-		loading = false;
 	});
 </script>
 
 {#if loading}
 	<div class="flex items-center justify-center py-24">
 		<div class="inline-block w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+	</div>
+{:else if error}
+	<div class="max-w-lg mx-auto px-6 py-10">
+		<div class="py-3 px-4 bg-red-900/20 border border-red-800/40 rounded-xl text-red-400 text-sm">
+			{error}
+		</div>
 	</div>
 {:else if entry}
 	<div in:fly={{ x: 30, duration: 200 }}>
@@ -67,9 +78,14 @@
 		confirmLabel="Delete"
 		confirmDestructive={true}
 		onconfirm={async () => {
-			await deletePassword(entry!.id);
-			addToast('Password deleted', 'info');
-			goto(resolve('/passwords'));
+			try {
+				await deletePassword(entry!.id);
+				addToast('Password deleted', 'info');
+				goto(resolve('/passwords'));
+			} catch (err) {
+				showDeleteConfirm = false;
+				addToast('Failed to delete password', 'error');
+			}
 		}}
 		oncancel={() => (showDeleteConfirm = false)}
 	/>

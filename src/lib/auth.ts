@@ -56,8 +56,8 @@ export async function checkAuthState(): Promise<AuthState> {
 		if (!sessionKey) return { status: 'locked' };
 
 		return { status: 'unlocked' };
-	} catch {
-		return { status: 'first_time_setup' };
+	} catch (error) {
+		return { status: 'error', message: error instanceof Error ? error.message : 'Failed to check vault state.' };
 	}
 }
 

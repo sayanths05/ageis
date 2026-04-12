@@ -5,6 +5,7 @@
 	import ShieldLogo from '$lib/components/ShieldLogo.svelte';
 
 	let password = $state('');
+	let passwordInput: HTMLInputElement;
 
 	async function onSubmit(e: Event) {
 		e.preventDefault();
@@ -12,7 +13,7 @@
 	}
 
 	onMount(() => {
-		document.getElementById('password')?.focus();
+		passwordInput?.focus();
 	});
 </script>
 
@@ -34,8 +35,10 @@
 				<input
 					id="password"
 					type="password"
+					bind:this={passwordInput}
 					bind:value={password}
 					disabled={$authLoading}
+					autocomplete="current-password"
 					placeholder="Super secret password..."
 					class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 disabled:opacity-50"
 				/>

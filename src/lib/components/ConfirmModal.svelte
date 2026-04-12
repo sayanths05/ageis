@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { fly, fade } from 'svelte/transition';
+	import { onMount } from 'svelte';
 
 	interface Props {
 		title: string;
@@ -18,23 +19,64 @@
 		onconfirm,
 		oncancel
 	}: Props = $props();
+
+	let modalEl: HTMLDivElement;
+
+	onMount(() => {
+		const focusable = modalEl.querySelectorAll<HTMLElement>(
+			'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+		);
+		const firstFocusable = focusable[0];
+		const lastFocusable = focusable[focusable.length - 1];
+
+		firstFocusable?.focus();
+
+		function handleKeydown(e: KeyboardEvent) {
+			if (e.key === 'Escape') {
+				oncancel();
+				return;
+			}
+
+			if (e.key !== 'Tab') return;
+
+			if (e.shiftKey) {
+				if (document.activeElement === firstFocusable) {
+					e.preventDefault();
+					lastFocusable?.focus();
+				}
+			} else {
+				if (document.activeElement === lastFocusable) {
+					e.preventDefault();
+					firstFocusable?.focus();
+				}
+			}
+		}
+
+		modalEl.addEventListener('keydown', handleKeydown);
+
+		return () => modalEl.removeEventListener('keydown', handleKeydown);
+	});
 </script>
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
 	class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+	role="presentation"
 	transition:fade={{ duration: 150 }}
-	onkeydown={(e) => { if (e.key === 'Escape') oncancel(); }}
 	onclick={oncancel}
+	onkeydown={(e) => { if (e.key === 'Escape') oncancel(); }}
 >
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
+		bind:this={modalEl}
 		class="w-full max-w-sm rounded-xl border border-slate-800 bg-slate-900 p-6 shadow-2xl"
+		role="dialog"
+		aria-modal="true"
+		aria-labelledby="confirm-modal-title"
+		tabindex="-1"
 		in:fly={{ y: 10, duration: 150 }}
 		onclick={(e) => e.stopPropagation()}
 		onkeydown={(e) => e.stopPropagation()}
 	>
-		<h2 class="text-lg font-semibold text-slate-100">{title}</h2>
+		<h2 id="confirm-modal-title" class="text-lg font-semibold text-slate-100">{title}</h2>
 
 		<p class="mt-2 text-sm text-slate-400">{message}</p>
 

@@ -5,6 +5,7 @@ const EXPORT_FILENAME = 'aegis-backup.db';
 
 export class OpfsStorage implements StorageBackend {
 	private ready = false;
+	private cachedHandle: FileSystemFileHandle | null = null;
 
 	async init(): Promise<void> {
 		this.ready = true;
@@ -96,7 +97,11 @@ export class OpfsStorage implements StorageBackend {
 	}
 
 	private async getFileHandle(): Promise<FileSystemFileHandle> {
+		if (this.cachedHandle) return this.cachedHandle;
+
 		const root = await navigator.storage.getDirectory();
-		return root.getFileHandle(DB_FILENAME, { create: true });
+		this.cachedHandle = await root.getFileHandle(DB_FILENAME, { create: true });
+
+		return this.cachedHandle;
 	}
 }

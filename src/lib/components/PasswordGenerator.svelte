@@ -24,7 +24,6 @@
 	}: Props = $props();
 
 	let stagedPassword = $state('');
-	let symbolsDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 	const charset = $derived.by(() => {
 		let chars = '';
@@ -102,14 +101,6 @@
 
 		await navigator.clipboard.writeText(stagedPassword);
 		addToast('Copied to clipboard', 'success');
-	}
-
-	function handleSymbolsInput() {
-		if (symbolsDebounceTimer) clearTimeout(symbolsDebounceTimer);
-
-		symbolsDebounceTimer = setTimeout(() => {
-			generate(charset, length);
-		}, 300);
 	}
 
 	function preventFormSubmit(e: KeyboardEvent) {
@@ -235,7 +226,6 @@
 			<input
 				type="text"
 				bind:value={allowedSymbols}
-				oninput={handleSymbolsInput}
 				onkeydown={preventFormSubmit}
 				class="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-700/60 rounded-lg text-slate-100 font-mono text-sm focus:outline-none focus:bg-slate-800/80 transition-colors"
 			/>

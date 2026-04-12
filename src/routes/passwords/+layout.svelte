@@ -34,9 +34,6 @@
 		resetAutoLockTimer();
 	}
 
-	function lock() {
-		handleLock();
-	}
 </script>
 
 <svelte:window
@@ -44,6 +41,7 @@
 	onmousemove={handleActivity}
 	onkeydown={handleActivity}
 	onclick={handleActivity}
+	ontouchstart={handleActivity}
 />
 
 <header class="sticky top-0 z-10 transition-all duration-200 {scrolled ? 'bg-slate-950/80 backdrop-blur-lg border-b border-slate-800' : ''}">
@@ -65,7 +63,7 @@
 			{/if}
 
 			<button
-				onclick={lock}
+				onclick={handleLock}
 				class="p-2 text-slate-500 hover:text-slate-300 transition-colors"
 				title="Lock vault"
 			>
@@ -75,4 +73,6 @@
 	</div>
 </header>
 
-{@render children()}
+{#if $authState.status === 'unlocked'}
+	{@render children()}
+{/if}

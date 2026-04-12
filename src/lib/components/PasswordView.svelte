@@ -1,9 +1,10 @@
 <script lang="ts">
 	import type { DecryptedPasswordEntry } from '$lib/types';
+	import { onDestroy } from 'svelte';
 	import { addToast } from '$lib/toast-store';
 	import { getInitial, getColorForName } from '$lib/colors';
 	import { ArrowLeft, Pencil, Trash2, ExternalLink } from 'lucide-svelte';
-    import { getFaviconUrl, handleFaviconError } from '$lib/utils';
+	import { getFaviconUrl } from '$lib/utils';
 
 	interface Props {
 		entry: DecryptedPasswordEntry;
@@ -16,15 +17,21 @@
 
 	let showPassword = $state(false);
 	let copied = $state('');
+	let copyTimer: ReturnType<typeof setTimeout>;
+	let faviconFailed = $state(false);
 
 	const color = $derived(getColorForName(entry.name));
-	const favicon = $derived(getFaviconUrl(entry.url));
+	const faviconSrc = $derived(getFaviconUrl(entry.url));
+	const favicon = $derived(faviconSrc && !faviconFailed ? faviconSrc : null);
+
+	onDestroy(() => clearTimeout(copyTimer));
 
 	async function copyToClipboard(text: string, field: string) {
 		await navigator.clipboard.writeText(text);
 		copied = field;
 		addToast('Copied to clipboard', 'success');
-		setTimeout(() => (copied = ''), 1500);
+		clearTimeout(copyTimer);
+		copyTimer = setTimeout(() => (copied = ''), 1500);
 	}
 
 	function copyPassword() {
@@ -73,14 +80,10 @@
 				<img
 					src={favicon}
 					alt=""
+					loading="lazy"
 					class="w-16 h-16 rounded-full object-cover bg-slate-800"
-					onerror={handleFaviconError}
+					onerror={() => (faviconFailed = true)}
 				/>
-				<div
-					class="w-16 h-16 rounded-full {color.bg} items-center justify-center hidden"
-				>
-					<span class="text-xl font-semibold {color.text}">{getInitial(entry.name)}</span>
-				</div>
 			{:else}
 				<div class="w-16 h-16 rounded-full {color.bg} flex items-center justify-center">
 					<span class="text-xl font-semibold {color.text}">{getInitial(entry.name)}</span>
